@@ -20,9 +20,15 @@ para repasar después con un sistema de repetición espaciada.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
 - **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Usamos estas tecnologías:
+- React + TypeScript: interfaz y lógica de la aplicación.
+- Vite + TanStack Router: compilación y navegación entre pantallas.
+- Tailwind CSS + shadcn/ui: diseño visual y componentes.
+- Capacitor: convierte la aplicación web React en una aplicación Android instalable.
+- Java: complemento nativo de Android para la traducción.
+- SQLite: guarda canciones, tarjetas, traducciones y progreso dentro del teléfono.
+- Google ML Kit Translation: traduce palabras localmente; descarga el modelo del idioma la primera vez y no necesita una API key.
+- Gradle/Android SDK: genera el archivo APK.
 
 ```sh
 git clone <this-repository-url>

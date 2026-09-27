@@ -1,12 +1,20 @@
-# Exactly As Seen
+# LyricLingo
 
-Implement exactly the screenshot and nothing else
+Una app para practicar idiomas a través de canciones de YouTube. Pega el link 
+de una canción, agrega la letra, y mientras escuchas vas traduciendo las palabras 
+o frases que te confundan. Cada una se convierte automáticamente en una flashcard 
+para repasar después con un sistema de repetición espaciada.
 
-This project was built with [Lovable](https://lovable.dev).
+## Cómo funciona
+
+1. **Agrega una canción**: pega el link de YouTube y la letra
+2. **Estudia mientras escuchas**: selecciona líneas o palabras y agrega tu propia 
+   traducción, o pide una traducción automática como apoyo
+3. **Genera flashcards**: lo que te confunda se guarda con contexto (la línea original 
+   de la canción) para reforzarlo después
+4. **Practica**: repasa tus tarjetas con un sistema de repetición espaciada tipo Anki
 
 ## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/e63d544e-1374-40a1-ab3b-3116aeefa2b6).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.

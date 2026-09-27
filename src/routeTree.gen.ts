@@ -11,6 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgregarRouteImport } from './routes/agregar'
+import { Route as PerfilRouteImport } from './routes/perfil'
+import { Route as PracticaRouteImport } from './routes/practica'
+import { Route as TarjetasRouteImport } from './routes/tarjetas'
 import { Route as CancionSongIdRouteImport } from './routes/cancion.$songId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +26,21 @@ const AgregarRoute = AgregarRouteImport.update({
   path: '/agregar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PracticaRoute = PracticaRouteImport.update({
+  id: '/practica',
+  path: '/practica',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TarjetasRoute = TarjetasRouteImport.update({
+  id: '/tarjetas',
+  path: '/tarjetas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CancionSongIdRoute = CancionSongIdRouteImport.update({
   id: '/cancion/$songId',
   path: '/cancion/$songId',
@@ -32,30 +50,61 @@ const CancionSongIdRoute = CancionSongIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agregar': typeof AgregarRoute
+  '/perfil': typeof PerfilRoute
+  '/practica': typeof PracticaRoute
+  '/tarjetas': typeof TarjetasRoute
   '/cancion/$songId': typeof CancionSongIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agregar': typeof AgregarRoute
+  '/perfil': typeof PerfilRoute
+  '/practica': typeof PracticaRoute
+  '/tarjetas': typeof TarjetasRoute
   '/cancion/$songId': typeof CancionSongIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agregar': typeof AgregarRoute
+  '/perfil': typeof PerfilRoute
+  '/practica': typeof PracticaRoute
+  '/tarjetas': typeof TarjetasRoute
   '/cancion/$songId': typeof CancionSongIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agregar' | '/cancion/$songId'
+  fullPaths:
+    | '/'
+    | '/agregar'
+    | '/perfil'
+    | '/practica'
+    | '/tarjetas'
+    | '/cancion/$songId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agregar' | '/cancion/$songId'
-  id: '__root__' | '/' | '/agregar' | '/cancion/$songId'
+  to:
+    | '/'
+    | '/agregar'
+    | '/perfil'
+    | '/practica'
+    | '/tarjetas'
+    | '/cancion/$songId'
+  id:
+    | '__root__'
+    | '/'
+    | '/agregar'
+    | '/perfil'
+    | '/practica'
+    | '/tarjetas'
+    | '/cancion/$songId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgregarRoute: typeof AgregarRoute
+  PerfilRoute: typeof PerfilRoute
+  PracticaRoute: typeof PracticaRoute
+  TarjetasRoute: typeof TarjetasRoute
   CancionSongIdRoute: typeof CancionSongIdRoute
 }
 
@@ -75,6 +124,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgregarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/practica': {
+      id: '/practica'
+      path: '/practica'
+      fullPath: '/practica'
+      preLoaderRoute: typeof PracticaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tarjetas': {
+      id: '/tarjetas'
+      path: '/tarjetas'
+      fullPath: '/tarjetas'
+      preLoaderRoute: typeof TarjetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cancion/$songId': {
       id: '/cancion/$songId'
       path: '/cancion/$songId'
@@ -88,6 +158,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgregarRoute: AgregarRoute,
+  PerfilRoute: PerfilRoute,
+  PracticaRoute: PracticaRoute,
+  TarjetasRoute: TarjetasRoute,
   CancionSongIdRoute: CancionSongIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -4,7 +4,7 @@ import { Pencil, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { cards as allCards, getSong, languageFlag, songs } from "@/lib/mock-data";
+import { cards as allCards, languageFlag, songs } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/tarjetas")({
   head: () => ({
@@ -106,4 +106,3 @@ function CardsScreen() {
   );
 }
 
-export { getSong };

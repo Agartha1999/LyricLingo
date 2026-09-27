@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgregarRouteImport } from './routes/agregar'
+import { Route as CancionSongIdRouteImport } from './routes/cancion.$songId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const AgregarRoute = AgregarRouteImport.update({
   path: '/agregar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CancionSongIdRoute = CancionSongIdRouteImport.update({
+  id: '/cancion/$songId',
+  path: '/cancion/$songId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agregar': typeof AgregarRoute
+  '/cancion/$songId': typeof CancionSongIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agregar': typeof AgregarRoute
+  '/cancion/$songId': typeof CancionSongIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agregar': typeof AgregarRoute
+  '/cancion/$songId': typeof CancionSongIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agregar'
+  fullPaths: '/' | '/agregar' | '/cancion/$songId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agregar'
-  id: '__root__' | '/' | '/agregar'
+  to: '/' | '/agregar' | '/cancion/$songId'
+  id: '__root__' | '/' | '/agregar' | '/cancion/$songId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgregarRoute: typeof AgregarRoute
+  CancionSongIdRoute: typeof CancionSongIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgregarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cancion/$songId': {
+      id: '/cancion/$songId'
+      path: '/cancion/$songId'
+      fullPath: '/cancion/$songId'
+      preLoaderRoute: typeof CancionSongIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgregarRoute: AgregarRoute,
+  CancionSongIdRoute: CancionSongIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

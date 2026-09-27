@@ -5,6 +5,7 @@ import {
   loadData,
   removeCard,
   reviewCard,
+  saveLineTranslation,
   type AppData,
   type NewCard,
   type NewSong,
@@ -17,10 +18,11 @@ type DataContextValue = AppData & {
   addCard: (card: NewCard) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
   gradeCard: (card: StoredCard, grade: number) => Promise<void>;
+  setLineTranslation: (songId: string, lineIndex: number, translation: string) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextValue | null>(null);
-const initial: AppData = { songs: [], cards: [], reviewDates: [] };
+const initial: AppData = { songs: [], cards: [], reviewDates: [], lineTranslations: [] };
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(initial);
@@ -53,6 +55,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       gradeCard: async (card, grade) => {
         await reviewCard(card, grade);
+        await refresh();
+      },
+      setLineTranslation: async (songId, lineIndex, translation) => {
+        await saveLineTranslation(songId, lineIndex, translation);
         await refresh();
       },
     }),

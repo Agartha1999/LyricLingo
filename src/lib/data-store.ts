@@ -13,10 +13,17 @@ export type StoredCard = Card & {
   repetitions: number;
 };
 
+export type LineTranslation = {
+  songId: string;
+  lineIndex: number;
+  translation: string;
+};
+
 export type AppData = {
   songs: Song[];
   cards: StoredCard[];
   reviewDates: string[];
+  lineTranslations: LineTranslation[];
 };
 
 export type NewSong = Omit<Song, "id">;
@@ -30,7 +37,7 @@ const WEB_KEY = "lyriclingo-data-v1";
 const sqlite = new SQLiteConnection(CapacitorSQLite);
 let database: SQLiteDBConnection | null = null;
 
-const emptyData = (): AppData => ({ songs: [], cards: [], reviewDates: [] });
+const emptyData = (): AppData => ({ songs: [], cards: [], reviewDates: [], lineTranslations: [] });
 const today = () => new Date().toISOString().slice(0, 10);
 const id = (prefix: string) =>
   `${prefix}-${Date.now()}-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
@@ -90,6 +97,14 @@ async function getDatabase() {
       grade INTEGER NOT NULL,
       FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS line_translations (
+      song_id TEXT NOT NULL,
+      line_index INTEGER NOT NULL,
+      translation TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (song_id, line_index),
+      FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
+    );
     CREATE INDEX IF NOT EXISTS idx_lyric_lines_song ON lyric_lines(song_id, order_index);
     CREATE INDEX IF NOT EXISTS idx_cards_due ON cards(due_at);
   `);
@@ -101,7 +116,13 @@ function loadWeb(): AppData {
   const raw = window.localStorage.getItem(WEB_KEY);
   if (!raw) return emptyData();
   try {
-    return JSON.parse(raw) as AppData;
+    const data = JSON.parse(raw) as Partial<AppData>;
+    return {
+      songs: data.songs ?? [],
+      cards: data.cards ?? [],
+      reviewDates: data.reviewDates ?? [],
+      lineTranslations: data.lineTranslations ?? [],
+    };
   } catch {
     return emptyData();
   }
@@ -122,6 +143,8 @@ export async function loadData(): Promise<AppData> {
   const reviewRows =
     (await db.query("SELECT substr(reviewed_at, 1, 10) AS day FROM reviews ORDER BY reviewed_at DESC"))
       .values ?? [];
+  const translationRows =
+    (await db.query("SELECT song_id, line_index, translation FROM line_translations")).values ?? [];
 
   const songs: Song[] = songRows.map((row) => ({
     id: String(row.id),
@@ -147,7 +170,50 @@ export async function loadData(): Promise<AppData> {
     dueInDays: 0,
   }));
 
-  return { songs, cards, reviewDates: reviewRows.map((row) => String(row.day)) };
+  return {
+    songs,
+    cards,
+    reviewDates: reviewRows.map((row) => String(row.day)),
+    lineTranslations: translationRows.map((row) => ({
+      songId: String(row.song_id),
+      lineIndex: Number(row.line_index),
+      translation: String(row.translation),
+    })),
+  };
+}
+
+export async function saveLineTranslation(
+  songId: string,
+  lineIndex: number,
+  translation: string,
+): Promise<void> {
+  const clean = translation.trim();
+  if (!isNative()) {
+    const data = loadWeb();
+    data.lineTranslations = data.lineTranslations.filter(
+      (item) => !(item.songId === songId && item.lineIndex === lineIndex),
+    );
+    if (clean) data.lineTranslations.push({ songId, lineIndex, translation: clean });
+    saveWeb(data);
+    return;
+  }
+
+  const db = await getDatabase();
+  if (!clean) {
+    await db.run("DELETE FROM line_translations WHERE song_id = ? AND line_index = ?", [
+      songId,
+      lineIndex,
+    ]);
+    return;
+  }
+  await db.run(
+    `INSERT INTO line_translations (song_id, line_index, translation, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(song_id, line_index) DO UPDATE SET
+       translation = excluded.translation,
+       updated_at = excluded.updated_at`,
+    [songId, lineIndex, clean, new Date().toISOString()],
+  );
 }
 
 export async function insertSong(input: NewSong): Promise<string> {

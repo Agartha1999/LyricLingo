@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { RotateCcw, PartyPopper } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Layers3, PartyPopper, RotateCcw, Shuffle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -32,8 +32,15 @@ const GRADES = [
   { label: "Fácil", grade: 3, className: "bg-primary-soft text-primary" },
 ];
 
+function shuffled<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+type PracticeMode = "match" | "cards";
+
 function Practice() {
   const { cards, songs, gradeCard } = useAppData();
+  const [mode, setMode] = useState<PracticeMode>("match");
   const [sessionIds] = useState(() => {
     const currentDay = new Date().toISOString().slice(0, 10);
     return cards.filter((card) => card.dueAt <= currentDay).map((card) => card.id);
@@ -41,6 +48,62 @@ function Practice() {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [leaving, setLeaving] = useState(false);
+
+  return (
+    <AppShell title="Práctica" subtitle="Relaciona palabras o repasa tus tarjetas">
+      <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1.5">
+        <Button variant={mode === "match" ? "default" : "ghost"} onClick={() => setMode("match")}>
+          <Shuffle className="size-4" /> Emparejar
+        </Button>
+        <Button variant={mode === "cards" ? "default" : "ghost"} onClick={() => setMode("cards")}>
+          <Layers3 className="size-4" /> Tarjetas
+        </Button>
+      </div>
+      {mode === "match" ? (
+        <MatchingPractice cards={cards} />
+      ) : (
+        <FlashcardPractice
+          cards={cards}
+          songs={songs}
+          gradeCard={gradeCard}
+          sessionIds={sessionIds}
+          index={index}
+          setIndex={setIndex}
+          flipped={flipped}
+          setFlipped={setFlipped}
+          leaving={leaving}
+          setLeaving={setLeaving}
+        />
+      )}
+    </AppShell>
+  );
+}
+
+type FlashcardPracticeProps = {
+  cards: ReturnType<typeof useAppData>["cards"];
+  songs: ReturnType<typeof useAppData>["songs"];
+  gradeCard: ReturnType<typeof useAppData>["gradeCard"];
+  sessionIds: string[];
+  index: number;
+  setIndex: React.Dispatch<React.SetStateAction<number>>;
+  flipped: boolean;
+  setFlipped: React.Dispatch<React.SetStateAction<boolean>>;
+  leaving: boolean;
+  setLeaving: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+function FlashcardPractice({
+  cards,
+  songs,
+  gradeCard,
+  sessionIds,
+  index,
+  setIndex,
+  flipped,
+  setFlipped,
+  leaving,
+  setLeaving,
+}: FlashcardPracticeProps) {
 
   const card = cards.find((item) => item.id === sessionIds[index]);
   const done = index >= sessionIds.length || !card;
@@ -58,8 +121,7 @@ function Practice() {
 
   if (done) {
     return (
-      <AppShell title="Sesión completa">
-        <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-10 text-center shadow-soft">
+      <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-10 text-center shadow-soft">
           <PartyPopper className="size-12 text-accent" />
           <h2 className="text-xl font-extrabold">
             {sessionIds.length === 0 ? "No tienes tarjetas pendientes" : `¡Repasaste ${sessionIds.length} tarjetas!`}
@@ -84,16 +146,17 @@ function Practice() {
               <Link to="/">Volver al inicio</Link>
             </Button>
           </div>
-        </div>
-      </AppShell>
+      </div>
     );
   }
 
   const song = songs.find((item) => item.id === card.songId);
 
   return (
-    <AppShell title="Práctica" subtitle={`${sessionIds.length - index} tarjetas restantes`}>
       <div className="space-y-6">
+        <p className="text-center text-xs font-bold text-muted-foreground">
+          {sessionIds.length - index} tarjetas restantes
+        </p>
         <Progress value={(index / sessionIds.length) * 100} className="h-3" />
 
         <div
@@ -144,6 +207,128 @@ function Practice() {
           </p>
         ) : null}
       </div>
-    </AppShell>
+  );
+}
+
+function MatchingPractice({ cards }: { cards: ReturnType<typeof useAppData>["cards"] }) {
+  const [round, setRound] = useState(0);
+  const pairs = useMemo(() => shuffled(cards).slice(0, 5), [cards, round]);
+  const meanings = useMemo(() => shuffled(pairs), [pairs]);
+  const [selectedTerm, setSelectedTerm] = useState<string | null>(null);
+  const [selectedMeaning, setSelectedMeaning] = useState<string | null>(null);
+  const [matched, setMatched] = useState<string[]>([]);
+  const [wrong, setWrong] = useState(false);
+
+  const restart = () => {
+    setSelectedTerm(null);
+    setSelectedMeaning(null);
+    setMatched([]);
+    setWrong(false);
+    setRound((value) => value + 1);
+  };
+
+  const choose = (termId: string | null, meaningId: string | null) => {
+    setSelectedTerm(termId);
+    setSelectedMeaning(meaningId);
+    if (!termId || !meaningId) return;
+    if (termId === meaningId) {
+      setMatched((current) => [...current, termId]);
+      setSelectedTerm(null);
+      setSelectedMeaning(null);
+      setWrong(false);
+    } else {
+      setWrong(true);
+      setTimeout(() => {
+        setSelectedTerm(null);
+        setSelectedMeaning(null);
+        setWrong(false);
+      }, 650);
+    }
+  };
+
+  if (cards.length < 2) {
+    return (
+      <div className="rounded-3xl border border-border bg-card p-8 text-center shadow-soft">
+        <p className="font-extrabold">Necesitas al menos 2 tarjetas</p>
+        <p className="mt-2 text-sm text-muted-foreground">Crea palabras y significados desde una canción.</p>
+      </div>
+    );
+  }
+
+  if (matched.length === pairs.length) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-10 text-center shadow-soft">
+        <PartyPopper className="size-12 text-accent" />
+        <h2 className="text-xl font-extrabold">¡Completaste los {pairs.length} pares!</h2>
+        <Button variant="hero" onClick={restart}>
+          <Shuffle className="size-4" /> Mezclar otra vez
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-muted-foreground">
+          Une cada palabra con su significado · {matched.length}/{pairs.length}
+        </p>
+        <Button variant="ghost" size="icon" onClick={restart} aria-label="Mezclar de nuevo">
+          <Shuffle className="size-4" />
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
+          {pairs.map((card) => {
+            const complete = matched.includes(card.id);
+            const selected = selectedTerm === card.id;
+            return (
+              <button
+                key={card.id}
+                disabled={complete || wrong}
+                onClick={() => choose(card.id, selectedMeaning)}
+                className={`min-h-16 w-full rounded-2xl border p-3 text-sm font-extrabold shadow-soft transition ${
+                  complete
+                    ? "border-primary/30 bg-primary-soft text-primary opacity-50"
+                    : selected
+                      ? wrong
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : "border-primary bg-primary-soft text-primary"
+                      : "border-border bg-card"
+                }`}
+              >
+                {complete ? <Check className="mx-auto mb-1 size-4" /> : null}
+                {card.term}
+              </button>
+            );
+          })}
+        </div>
+        <div className="space-y-3">
+          {meanings.map((card) => {
+            const complete = matched.includes(card.id);
+            const selected = selectedMeaning === card.id;
+            return (
+              <button
+                key={card.id}
+                disabled={complete || wrong}
+                onClick={() => choose(selectedTerm, card.id)}
+                className={`min-h-16 w-full rounded-2xl border p-3 text-sm font-bold shadow-soft transition ${
+                  complete
+                    ? "border-primary/30 bg-primary-soft text-primary opacity-50"
+                    : selected
+                      ? wrong
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : "border-accent bg-accent-soft text-accent-foreground"
+                      : "border-border bg-card"
+                }`}
+              >
+                {complete ? <Check className="mx-auto mb-1 size-4" /> : null}
+                {card.translation}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }

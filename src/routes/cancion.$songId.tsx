@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Languages, Plus } from "lucide-react";
+import { ArrowLeft, Check, Languages, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/cancion/$songId")({
 
 function Player() {
   const { songId } = Route.useParams();
-  const { songs, cards, addCard } = useAppData();
+  const { songs, cards, lineTranslations, addCard, setLineTranslation } = useAppData();
   const song = songs.find((item) => item.id === songId);
   const existing = cards.filter((card) => card.songId === songId);
   const [cardLines, setCardLines] = useState<number[]>(existing.map((c) => c.lineIndex));
@@ -29,6 +29,8 @@ function Player() {
   const [note, setNote] = useState("");
   const [translating, setTranslating] = useState(false);
   const [machineTranslated, setMachineTranslated] = useState(false);
+  const [lineDrafts, setLineDrafts] = useState<Record<number, string>>({});
+  const [savingLine, setSavingLine] = useState<number | null>(null);
 
   const open = (i: number) => {
     setSelected(i);
@@ -96,18 +98,61 @@ function Player() {
         <ul className="space-y-2">
           {song.lines.map((line, i) => {
             const hasCard = cardLines.includes(i);
+            const savedTranslation =
+              lineTranslations.find((item) => item.songId === song.id && item.lineIndex === i)
+                ?.translation ?? "";
+            const draft = lineDrafts[i] ?? savedTranslation;
             return (
-              <li key={i}>
+              <li
+                key={i}
+                className={`rounded-2xl border bg-card p-3 shadow-sm ${
+                  hasCard ? "border-accent/40" : "border-border"
+                }`}
+              >
                 <button
                   onClick={() => open(i)}
-                  className={`tap w-full rounded-2xl border px-4 py-3 text-left text-[15px] leading-relaxed active:scale-[0.99] ${
-                    hasCard
-                      ? "border-accent/40 bg-accent-soft font-semibold text-accent-foreground"
-                      : "border-transparent bg-card text-card-foreground"
+                  className={`tap w-full rounded-xl px-2 py-2 text-left text-[15px] leading-relaxed active:scale-[0.99] ${
+                    hasCard ? "bg-accent-soft font-semibold text-accent-foreground" : "text-card-foreground"
                   }`}
                 >
                   {line}
                 </button>
+                <div className="mt-2 flex items-center gap-2 border-t border-border/70 pt-2">
+                  <Input
+                    value={draft}
+                    onChange={(event) =>
+                      setLineDrafts((current) => ({ ...current, [i]: event.target.value }))
+                    }
+                    onClick={(event) => event.stopPropagation()}
+                    placeholder="Mi traducción de esta línea…"
+                    className="h-10 flex-1 rounded-xl border-0 bg-muted/70 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={savingLine === i || draft.trim() === savedTranslation}
+                    aria-label="Guardar mi traducción"
+                    onClick={async () => {
+                      setSavingLine(i);
+                      try {
+                        await setLineTranslation(song.id, i, draft);
+                        toast.success(draft.trim() ? "Traducción guardada" : "Traducción eliminada");
+                      } catch (error) {
+                        console.error(error);
+                        toast.error("No se pudo guardar tu traducción");
+                      } finally {
+                        setSavingLine(null);
+                      }
+                    }}
+                  >
+                    {draft.trim() && draft.trim() === savedTranslation ? (
+                      <Check className="size-4 text-primary" />
+                    ) : (
+                      <Save className="size-4" />
+                    )}
+                  </Button>
+                </div>
               </li>
             );
           })}

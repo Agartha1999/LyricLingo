@@ -1,51 +1,65 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Sparkles, Plus, Check } from "lucide-react";
+import { ArrowLeft, Languages, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getSong, cardsForSong, languageFlag, languageLabel } from "@/lib/mock-data";
+import { languageFlag, languageLabel } from "@/lib/mock-data";
+import { useAppData } from "@/lib/data-context";
+import { OnDeviceTranslation } from "@/lib/translation";
 
 export const Route = createFileRoute("/cancion/$songId")({
-  loader: ({ params }) => {
-    const song = getSong(params.songId);
-    if (!song) throw notFound();
-    return { song };
-  },
-  head: ({ loaderData }) => {
-    if (!loaderData) {
-      return {
-        meta: [{ title: "Canción no encontrada — LyricLingo" }, { name: "robots", content: "noindex" }],
-      };
-    }
-    const t = `${loaderData.song.title} — LyricLingo`;
-    const d = `Estudia "${loaderData.song.title}" de ${loaderData.song.artist} verso por verso y crea tus flashcards.`;
-    return {
-      meta: [
-        { title: t },
-        { name: "description", content: d },
-        { property: "og:title", content: t },
-        { property: "og:description", content: d },
-      ],
-    };
-  },
+  head: () => ({ meta: [{ title: "Estudiar canción — LyricLingo" }] }),
   component: Player,
 });
 
 function Player() {
-  const { song } = Route.useLoaderData();
-  const existing = cardsForSong(song.id);
+  const { songId } = Route.useParams();
+  const { songs, cards, addCard } = useAppData();
+  const song = songs.find((item) => item.id === songId);
+  const existing = cards.filter((card) => card.songId === songId);
   const [cardLines, setCardLines] = useState<number[]>(existing.map((c) => c.lineIndex));
   const [selected, setSelected] = useState<number | null>(null);
+  const [selectedWords, setSelectedWords] = useState<number[]>([]);
+  const [term, setTerm] = useState("");
   const [note, setNote] = useState("");
-  const [autoTranslated, setAutoTranslated] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [machineTranslated, setMachineTranslated] = useState(false);
 
   const open = (i: number) => {
     setSelected(i);
+    setSelectedWords([]);
+    setTerm("");
     setNote("");
-    setAutoTranslated(false);
+    setTranslating(false);
+    setMachineTranslated(false);
+  };
+
+  if (!song) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <p className="text-xl font-extrabold">No encontramos esta canción</p>
+        <Button asChild variant="hero">
+          <Link to="/">Volver a la biblioteca</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const selectedLine = selected !== null ? (song.lines[selected] ?? "") : "";
+  const words =
+    selectedLine.match(/[\p{L}\p{M}\p{N}]+(?:['’’-][\p{L}\p{M}\p{N}]+)*/gu) ?? [];
+
+  const toggleWord = (wordIndex: number) => {
+    const next = selectedWords.includes(wordIndex)
+      ? selectedWords.filter((index) => index !== wordIndex)
+      : [...selectedWords, wordIndex].sort((a, b) => a - b);
+    setSelectedWords(next);
+    setTerm(next.map((index) => words[index]).filter(Boolean).join(" "));
   };
 
   return (
@@ -77,7 +91,7 @@ function Player() {
 
       <main className="mx-auto max-w-3xl px-4 pt-2">
         <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-          Toca un verso para traducirlo
+          Toca un verso y elige las palabras que quieres aprender
         </p>
         <ul className="space-y-2">
           {song.lines.map((line, i) => {
@@ -101,52 +115,136 @@ function Player() {
       </main>
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent side="bottom" className="rounded-t-3xl">
+        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-3xl">
           <SheetHeader className="px-0">
-            <SheetTitle className="text-left text-base">
-              {selected !== null ? song.lines[selected] : ""}
-            </SheetTitle>
+            <SheetTitle className="text-left text-base">Selecciona una palabra o frase</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 pb-6">
-            <Button
-              variant="soft"
-              className="w-full"
-              onClick={() => {
-                setAutoTranslated(true);
-                setNote("Traducción sugerida automáticamente (demo)");
-              }}
-            >
-              <Sparkles className="size-4" />
-              Traducir automáticamente
-            </Button>
-            {autoTranslated ? (
-              <p className="rounded-2xl bg-primary-soft px-4 py-3 text-sm font-semibold text-primary">
-                Traducción sugerida automáticamente (demo)
-              </p>
-            ) : null}
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Escribe tu propia traducción o nota..."
-              className="min-h-24 rounded-2xl"
-            />
+            <p className="rounded-2xl bg-muted px-4 py-3 text-sm italic text-muted-foreground">
+              “{selectedLine}”
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">Toca una o varias palabras</Label>
+              <div className="flex flex-wrap gap-2">
+                {words.map((word, index) => {
+                  const active = selectedWords.includes(index);
+                  return (
+                    <button
+                      key={`${word}-${index}`}
+                      type="button"
+                      onClick={() => toggleWord(index)}
+                      className={`tap rounded-full border px-3 py-2 text-sm font-bold active:scale-95 ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-card-foreground"
+                      }`}
+                    >
+                      {word}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="term" className="text-sm font-bold">
+                Palabra o frase para la tarjeta
+              </Label>
+              <Input
+                id="term"
+                value={term}
+                onChange={(event) => {
+                  setTerm(event.target.value);
+                  setSelectedWords([]);
+                }}
+                placeholder="Selecciona arriba o escribe una frase"
+                className="h-12 rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="translation" className="text-sm font-bold">
+                Traducción o nota
+              </Label>
+              <Button
+                type="button"
+                variant="soft"
+                className="w-full"
+                disabled={!term.trim() || translating}
+                onClick={async () => {
+                  setTranslating(true);
+                  try {
+                    const result = await OnDeviceTranslation.translate({
+                      text: term.trim(),
+                      sourceLanguage: song.language,
+                      targetLanguage: "es",
+                    });
+                    setNote(result.translation);
+                    setMachineTranslated(true);
+                  } catch (error) {
+                    console.error(error);
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "No se pudo realizar la traducción automática",
+                    );
+                  } finally {
+                    setTranslating(false);
+                  }
+                }}
+              >
+                <Languages className="size-4" />
+                {translating ? "Descargando idioma y traduciendo…" : "Traducir con Google"}
+              </Button>
+              <Textarea
+                id="translation"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Escribe qué significa..."
+                className="min-h-24 rounded-2xl"
+              />
+              {machineTranslated ? (
+                <p className="text-center text-[11px] text-muted-foreground">
+                  Traducción automática con la tecnología de{" "}
+                  <a
+                    href="https://translate.google.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-primary underline underline-offset-2"
+                  >
+                    Google Translate
+                  </a>
+                  . Puedes corregirla antes de guardar.
+                </p>
+              ) : null}
+            </div>
             <Button
               variant="hero"
               className="w-full"
-              disabled={!note.trim()}
-              onClick={() => {
-                if (selected !== null && !cardLines.includes(selected)) {
-                  setCardLines([...cardLines, selected]);
+              disabled={!term.trim() || !note.trim()}
+              onClick={async () => {
+                if (selected === null) return;
+                try {
+                  await addCard({
+                    songId: song.id,
+                    term: term.trim(),
+                    translation: note.trim(),
+                    context: selectedLine,
+                    lineIndex: selected,
+                  });
+                  setCardLines((lines) =>
+                    lines.includes(selected) ? lines : [...lines, selected],
+                  );
+                  toast.success(`Tarjeta creada: ${term.trim()}`);
+                  setSelected(null);
+                } catch (error) {
+                  console.error(error);
+                  toast.error("No se pudo guardar la tarjeta");
                 }
-                toast.success("Tarjeta creada");
-                setSelected(null);
               }}
             >
-              {selected !== null && cardLines.includes(selected) ? (
-                <Check className="size-4" />
-              ) : (
-                <Plus className="size-4" />
-              )}
+              <Plus className="size-4" />
               Convertir en tarjeta
             </Button>
           </div>

@@ -4,7 +4,8 @@ import { RotateCcw, PartyPopper } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { cards, getSong, languageFlag } from "@/lib/mock-data";
+import { languageFlag } from "@/lib/mock-data";
+import { useAppData } from "@/lib/data-context";
 
 export const Route = createFileRoute("/practica")({
   head: () => ({
@@ -24,24 +25,29 @@ export const Route = createFileRoute("/practica")({
   component: Practice,
 });
 
-const session = cards.filter((c) => c.dueInDays === 0);
-
 const GRADES = [
-  { label: "Otra vez", className: "bg-destructive text-destructive-foreground" },
-  { label: "Difícil", className: "bg-accent text-accent-foreground" },
-  { label: "Bien", className: "bg-primary text-primary-foreground" },
-  { label: "Fácil", className: "bg-primary-soft text-primary" },
+  { label: "Otra vez", grade: 0, className: "bg-destructive text-destructive-foreground" },
+  { label: "Difícil", grade: 1, className: "bg-accent text-accent-foreground" },
+  { label: "Bien", grade: 2, className: "bg-primary text-primary-foreground" },
+  { label: "Fácil", grade: 3, className: "bg-primary-soft text-primary" },
 ];
 
 function Practice() {
+  const { cards, songs, gradeCard } = useAppData();
+  const [sessionIds] = useState(() => {
+    const currentDay = new Date().toISOString().slice(0, 10);
+    return cards.filter((card) => card.dueAt <= currentDay).map((card) => card.id);
+  });
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
-  const card = session[index];
-  const done = index >= session.length;
+  const card = cards.find((item) => item.id === sessionIds[index]);
+  const done = index >= sessionIds.length || !card;
 
-  const next = () => {
+  const next = async (grade: number) => {
+    if (!card) return;
+    await gradeCard(card, grade);
     setLeaving(true);
     setTimeout(() => {
       setFlipped(false);
@@ -55,8 +61,14 @@ function Practice() {
       <AppShell title="Sesión completa">
         <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-10 text-center shadow-soft">
           <PartyPopper className="size-12 text-accent" />
-          <h2 className="text-xl font-extrabold">¡Repasaste {session.length} tarjetas!</h2>
-          <p className="text-sm text-muted-foreground">Vuelve mañana para mantener tu racha.</p>
+          <h2 className="text-xl font-extrabold">
+            {sessionIds.length === 0 ? "No tienes tarjetas pendientes" : `¡Repasaste ${sessionIds.length} tarjetas!`}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {sessionIds.length === 0
+              ? "Crea tarjetas desde una canción o vuelve cuando toque el siguiente repaso."
+              : "Vuelve mañana para mantener tu racha."}
+          </p>
           <div className="flex gap-2">
             <Button
               variant="soft"
@@ -77,12 +89,12 @@ function Practice() {
     );
   }
 
-  const song = getSong(card.songId);
+  const song = songs.find((item) => item.id === card.songId);
 
   return (
-    <AppShell title="Práctica" subtitle={`${session.length - index} tarjetas restantes`}>
+    <AppShell title="Práctica" subtitle={`${sessionIds.length - index} tarjetas restantes`}>
       <div className="space-y-6">
-        <Progress value={(index / session.length) * 100} className="h-3" />
+        <Progress value={(index / sessionIds.length) * 100} className="h-3" />
 
         <div
           className={`[perspective:1400px] transition-all duration-250 ${
@@ -118,7 +130,7 @@ function Practice() {
           {GRADES.map((g) => (
             <button
               key={g.label}
-              onClick={next}
+              onClick={() => void next(g.grade)}
               disabled={!flipped}
               className={`tap rounded-2xl px-3 py-3.5 text-sm font-extrabold shadow-soft active:scale-95 disabled:opacity-40 ${g.className}`}
             >

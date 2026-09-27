@@ -5,14 +5,12 @@ import { AppShell } from "@/components/AppShell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  songs,
-  cardCount,
   thumbnail,
   LANGUAGES,
   languageLabel,
   languageFlag,
-  stats,
 } from "@/lib/mock-data";
+import { useAppData } from "@/lib/data-context";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,8 +32,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Library() {
+  const { songs, cards } = useAppData();
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState<string>("all");
+  const pending = cards.filter((card) => card.dueAt <= new Date().toISOString().slice(0, 10)).length;
 
   const filtered = useMemo(
     () =>
@@ -52,11 +52,11 @@ function Library() {
   return (
     <AppShell
       title="Mi biblioteca"
-      subtitle={`${songs.length} canciones · ${stats.pending} tarjetas por repasar`}
+      subtitle={`${songs.length} canciones · ${pending} tarjetas por repasar`}
       action={
         <div className="flex items-center gap-1 rounded-full bg-accent-soft px-3 py-1.5 text-sm font-extrabold text-accent-foreground">
           <Flame className="size-4" />
-          {stats.streak}
+          {pending}
         </div>
       }
     >
@@ -110,7 +110,7 @@ function Library() {
                     </span>
                     <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
                       <Layers className="size-3.5" />
-                      {cardCount(song.id)} tarjetas
+                      {cards.filter((card) => card.songId === song.id).length} tarjetas
                     </span>
                   </div>
                 </div>
@@ -121,7 +121,9 @@ function Library() {
 
         {filtered.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            No encontramos canciones con ese filtro.
+            {songs.length === 0
+              ? "Tu biblioteca está vacía. Agrega tu primera canción para comenzar."
+              : "No encontramos canciones con ese filtro."}
           </p>
         ) : null}
       </div>

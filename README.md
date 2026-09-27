@@ -30,3 +30,16 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Android
+
+La aplicación móvil usa Capacitor y guarda canciones, letras, tarjetas y repasos
+en una base SQLite local del teléfono. No requiere un backend ni una cuenta.
+
+```sh
+npm run android:sync
+npm run android:open
+```
+
+El APK de depuración se genera desde el proyecto `android` con la tarea
+`:app:assembleDebug` y queda en `android/app/build/outputs/apk/debug/app-debug.apk`.

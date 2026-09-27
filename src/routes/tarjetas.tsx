@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import { Pencil, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { cards as allCards, languageFlag, songs } from "@/lib/mock-data";
+import { languageFlag } from "@/lib/mock-data";
+import { useAppData } from "@/lib/data-context";
 
 export const Route = createFileRoute("/tarjetas")({
   head: () => ({
@@ -25,8 +25,7 @@ export const Route = createFileRoute("/tarjetas")({
 });
 
 function CardsScreen() {
-  const [deleted, setDeleted] = useState<string[]>([]);
-  const cards = useMemo(() => allCards.filter((c) => !deleted.includes(c.id)), [deleted]);
+  const { cards, songs, deleteCard } = useAppData();
 
   return (
     <AppShell
@@ -81,9 +80,14 @@ function CardsScreen() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            setDeleted([...deleted, card.id]);
-                            toast.success("Tarjeta eliminada");
+                          onClick={async () => {
+                            try {
+                              await deleteCard(card.id);
+                              toast.success("Tarjeta eliminada");
+                            } catch (error) {
+                              console.error(error);
+                              toast.error("No se pudo eliminar la tarjeta");
+                            }
                           }}
                         >
                           <Trash2 className="size-4 text-destructive" />

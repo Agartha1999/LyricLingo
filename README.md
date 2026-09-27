@@ -14,12 +14,6 @@ para repasar después con un sistema de repetición espaciada.
    de la canción) para reforzarlo después
 4. **Practica**: repasa tus tarjetas con un sistema de repetición espaciada tipo Anki
 
-## Build with Lovable
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
 Usamos estas tecnologías:
 - React + TypeScript: interfaz y lógica de la aplicación.
 - Vite + TanStack Router: compilación y navegación entre pantallas.
